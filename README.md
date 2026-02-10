@@ -19,7 +19,7 @@ This project implements a deep learning-based defect detection system specifical
 - **Framework**: Ultralytics YOLOv8
 - **Task**: Object Detection
 - **Classes**: 1 (Defect)
-- **Input**: RGB Images
+- **Input**: RGB Images or Monochrome Images
 - **Architecture**: YOLOv8n (Nano variant for optimal speed-accuracy balance)
 
 ### Trained Models
@@ -218,19 +218,4 @@ cap.set(cv2.CAP_PROP_FPS, 30)
 - Optimize confidence thresholds for your specific use case
 
 ## 📄 License
-
-Dataset: CC BY 4.0 (AITEX Textile Defects via Roboflow)
-
-## 🙏 Acknowledgments
-
-- **Ultralytics** for YOLOv8 framework
-- **Roboflow** for dataset hosting and management
-- **AITEX** for the original textile defects dataset
-
-## 📬 Contact & Support
-
-For questions, issues, or contributions, please refer to the project repository.
-
----
-
-**Built with ❤️ for the textile manufacturing industry**
+Dataset: CC BY 4.0 

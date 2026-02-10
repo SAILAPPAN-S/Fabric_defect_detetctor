@@ -1,0 +1,16 @@
+# Core ML Framework
+ultralytics>=8.0.0
+
+# Web API Framework
+flask>=2.3.0
+
+# Image Processing
+Pillow>=10.0.0
+opencv-python>=4.8.0
+numpy>=1.24.0
+
+# Object Detection Enhancement
+sahi>=0.11.0
+
+# Dataset Management
+roboflow>=1.1.0

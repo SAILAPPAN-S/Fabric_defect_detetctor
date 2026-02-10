@@ -1,0 +1,24 @@
+# Dataset
+aitex-textile-defects-v2-1/
+test_images/
+
+# Base YOLO models (not custom trained)
+yolov8n.pt
+yolo26n.pt
+test_image.py
+
+# Python environment
+venv/
+__pycache__/
+*.py[cod]
+
+# Jupyter Notebook
+.ipynb_checkpoints/
+
+# IDE
+.vscode/
+.idea/
+
+# Testing output
+result_sliced.png
+runs/

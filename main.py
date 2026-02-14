@@ -3,7 +3,7 @@ from ultralytics import YOLO
 import time
 
 # --- CONFIGURATION ---
-MODEL_PATH = 'best.pt'      # Path to your trained model
+MODEL_PATH = 'notebook/best.pt'  # Path to your trained model
 CAMERA_INDEX = 0            # 0 is usually the default USB camera. Try 1 if 0 fails.
 CONFIDENCE_THRESHOLD = 0.45 # Set lower (0.45) to catch more defects (Recall > Precision)
                             # Set higher (0.60) to avoid false alarms

@@ -3,6 +3,7 @@ ultralytics>=8.0.0
 
 # Web API Framework
 flask>=2.3.0
+requests>=2.31.0
 
 # Image Processing
 Pillow>=10.0.0

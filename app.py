@@ -42,12 +42,26 @@ last_defect_time = 0
 total_defects_found = 0
 frames_processed = 0
 tracked_defects = {}  # Track defect locations to avoid re-reporting
+process_active = False  # Only count defects when process is running
+last_process_active = False  # Track state changes
 DEFECT_COOLDOWN = 0.5  # Minimum 0.5s between defect notifications
 DEFECT_DISTANCE_THRESHOLD = 50  # pixels - if defect moves >50px, it's a new defect
 
+def check_process_status():
+    """Query Node server to check if process is currently active"""
+    global process_active
+    try:
+        response = requests.get(f"{NODE_SERVER}/plc/process-status", timeout=3)
+        data = response.json()
+        process_active = data.get("processActive", False)
+        return data
+    except Exception as e:
+        print(f"⚠️ Failed to get process status: {e}")
+        return {"processActive": False}
+
 def continuous_monitoring():
     """Continuously monitor camera and detect defects in real-time"""
-    global camera_running, last_defect_time, total_defects_found, frames_processed, tracked_defects
+    global camera_running, last_defect_time, total_defects_found, frames_processed, tracked_defects, process_active, last_process_active
     
     cap = cv2.VideoCapture(0)
     
@@ -62,7 +76,9 @@ def continuous_monitoring():
     
     print("✅ Camera connected - Continuous monitoring started")
     print("🎥 Display window opened (Press 'q' to quit)")
+    print("⏳ Waiting for process to start...")
     camera_running = True
+    status_check_counter = 0
     
     try:
         while camera_running:
@@ -72,6 +88,23 @@ def continuous_monitoring():
                 continue
             
             frames_processed += 1
+            
+            # Check process status every 30 frames to avoid too many requests
+            status_check_counter += 1
+            if status_check_counter >= 30:
+                status_check_counter = 0
+                status_data = check_process_status()
+                
+                # Detect process state change
+                if process_active and not last_process_active:
+                    print(f"🟢 PROCESS STARTED - Tracking enabled (PID: {status_data.get('processId')})")
+                    tracked_defects.clear()  # Reset tracking
+                    total_defects_found = 0  # Reset counter
+                elif not process_active and last_process_active:
+                    print(f"🔴 PROCESS ENDED - Tracking disabled")
+                    tracked_defects.clear()  # Clear tracking
+                
+                last_process_active = process_active
             
             # Run inference on current frame
             results = model(frame, conf=CONF_THRESHOLD, verbose=False)
@@ -90,32 +123,39 @@ def continuous_monitoring():
                     # Calculate center of bounding box
                     box_center = ((x1 + x2) // 2, (y1 + y2) // 2)
                     
-                    # Check if this is a new defect
-                    is_new, defect_id = is_new_defect(box_center, len(tracked_defects))
+                    # Check if this is a new defect (only if process is active)
+                    if process_active:
+                        is_new, defect_id = is_new_defect(box_center, len(tracked_defects))
+                    else:
+                        is_new = False
+                        defect_id = 0  # Don't track if process not active
                     
-                    # Draw red rectangle for defects
-                    color = (0, 0, 255) if is_new else (0, 165, 255)  # Red for new, Orange for tracked
+                    # Draw red rectangle for new defects, orange for tracked
+                    color = (0, 0, 255) if is_new else (0, 165, 255)
                     cv2.rectangle(frame, (x1, y1), (x2, y2), color, 2)
                     
                     # Draw confidence and defect ID
-                    label = f"NEW #{defect_id}" if is_new else f"Track #{defect_id}"
+                    label = f"NEW #{defect_id}" if is_new and process_active else f"Idle #{defect_id}" if not process_active else f"Track #{defect_id}"
                     cv2.putText(frame, f"{label} {confidence:.2f}", (x1, y1 - 10),
                                 cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
                     
-                    if is_new:
+                    if is_new and process_active:
                         new_defects_in_frame.append((defect_id, defect_count, confidence))
             
             # Display frame count, defect info, and statistics
+            process_status_text = "PROCESS ACTIVE ✅" if process_active else "IDLE ⏳"
+            status_color = (0, 255, 0) if process_active else (255, 255, 0)
+            
             cv2.putText(frame, f"Defects in Frame: {defect_count}", (10, 30),
                         cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
             cv2.putText(frame, f"Total Unique Defects: {total_defects_found}", (10, 70),
-                        cv2.FONT_HERSHEY_SIMPLEX, 0.8, (255, 0, 0), 2)
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.8, (255, 0, 0) if process_active else (100, 100, 100), 2)
             cv2.putText(frame, f"Currently Tracking: {len(tracked_defects)}", (10, 110),
                         cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 165, 255), 2)
             cv2.putText(frame, f"Frames: {frames_processed}", (10, 150),
                         cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 0), 2)
-            cv2.putText(frame, "AI Monitoring Active", (10, 190),
-                        cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 0), 2)
+            cv2.putText(frame, process_status_text, (10, 190),
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.7, status_color, 2)
             
             # Show the frame
             cv2.imshow("Fabric Defect Detection - Continuous Monitoring", frame)
@@ -126,8 +166,8 @@ def continuous_monitoring():
                 camera_running = False
                 break
             
-            # POST to Node ONLY on NEW defects (not same defect moving)
-            if new_defects_in_frame:
+            # POST to Node ONLY on NEW defects AND when process is active
+            if new_defects_in_frame and process_active:
                 current_time = time.time()
                 if current_time - last_defect_time >= DEFECT_COOLDOWN:
                     last_defect_time = current_time
@@ -145,7 +185,7 @@ def continuous_monitoring():
                                     "confidence": float(conf),
                                     "timestamp": current_time
                                 },
-                                timeout=2
+                                timeout=5
                             )
                             print(f"📤 NEW Defect #{defect_id} POST sent to Node (confidence: {conf:.2f}, Total: {total_defects_found})")
                     except Exception as e:

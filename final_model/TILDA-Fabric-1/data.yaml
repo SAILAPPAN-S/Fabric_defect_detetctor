@@ -1,0 +1,15 @@
+names:
+- hole
+- objects
+- oil spot
+- thread error
+nc: 4
+roboflow:
+  license: Public Domain
+  project: tilda-fabric-ujur1
+  url: https://universe.roboflow.com/sailappan-sn6vd/tilda-fabric-ujur1/dataset/1
+  version: 1
+  workspace: sailappan-sn6vd
+test: ../test/images
+train: ../train/images
+val: ../valid/images

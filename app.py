@@ -6,8 +6,8 @@ import io
 app = Flask(__name__)
 
 # --- CONFIGURATION ---
-MODEL_PATH = 'best.pt'
-CONFIDENCE_THRESHOLD = 0.25  # Adjust this based on your testing
+MODEL_PATH = 'notebook/best.pt'
+CONFIDENCE_THRESHOLD = 0.60 # Adjust this based on your testing
 
 # --- LOAD MODEL (Once at startup) ---
 print("⏳ Loading YOLO model...")
